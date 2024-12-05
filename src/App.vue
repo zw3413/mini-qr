@@ -376,19 +376,28 @@ watch(
 
 onMounted(() => {
   console.log(url.value)
-  const urlParam = getUrlParam("url");
+  let urlParam = getUrlParam("url");
   console.log(urlParam)
   if(urlParam){
+    const prefix = "https://metube.bakers.top/"
+  
+    //urlParam = replaceSpacesWithURICode(urlParam)
+    urlParam = encodeURI(urlParam)
+    urlParam = urlParam
+
     const updatedPreset = allPresets.find((preset) => preset.name === 'Bakers.top')
     if (updatedPreset) {
       updatedPreset.data = urlParam
       selectedPreset.value = updatedPreset
     }
+
     data.value = urlParam
     url.value = urlParam
     HasUrl.value = true
     console.log(url.value)
     
+
+
     setTimeout(async()=>{
       const qrCode = document.querySelector('#qr-code-container');
       console.log(options.value)
