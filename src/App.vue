@@ -17,7 +17,7 @@ import {
   type ErrorCorrectionLevel,
   type Options as StyledQRCodeProps
 } from 'qr-code-styling'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch, nextTick  } from 'vue'
 import 'vue-i18n'
 import { useI18n } from 'vue-i18n'
 import { createRandomColor, getRandomItemInArray } from './utils/color'
@@ -45,6 +45,9 @@ const width = ref()
 const height = ref()
 const margin = ref()
 const imageMargin = ref()
+const url = ref()
+const HasUrl = ref(false)
+const pngUrl = ref()
 
 const dotsOptionsColor = ref()
 const dotsOptionsType = ref()
@@ -160,12 +163,16 @@ watch(selectedPreset, () => {
   errorCorrectionLevel.value = selectedPreset.value.qrOptions
     ? selectedPreset.value.qrOptions.errorCorrectionLevel
     : 'Q'
+
+  
+   
 })
 
-const LAST_LOADED_LOCALLY_PRESET_KEY = 'Last saved locally'
+
+let LAST_LOADED_LOCALLY_PRESET_KEY = 'Last saved locally'
 const LOADED_FROM_FILE_PRESET_KEY = 'Loaded from file'
 const CUSTOM_LOADED_PRESET_KEYS = [LAST_LOADED_LOCALLY_PRESET_KEY, LOADED_FROM_FILE_PRESET_KEY]
-const selectedPresetKey = ref<string>(LAST_LOADED_LOCALLY_PRESET_KEY)
+let selectedPresetKey = ref<string>(LAST_LOADED_LOCALLY_PRESET_KEY)
 const lastCustomLoadedPreset = ref<Preset>()
 watch(
   selectedPresetKey,
@@ -231,6 +238,7 @@ function downloadQRImageAsPng() {
   if (exportMode.value === ExportMode.Single) {
     const qrCode = document.querySelector('#qr-code-container')
     if (qrCode) {
+      console.log(styledBorderRadiusFormatted.value)
       downloadPngElement(
         qrCode as HTMLElement,
         'qr-code.png',
@@ -367,7 +375,34 @@ watch(
 )
 
 onMounted(() => {
-  loadQRConfigFromLocalStorage()
+  console.log(url.value)
+  const urlParam = getUrlParam("url");
+  console.log(urlParam)
+  if(urlParam){
+    const updatedPreset = allPresets.find((preset) => preset.name === 'Bakers.top')
+    if (updatedPreset) {
+      updatedPreset.data = urlParam
+      selectedPreset.value = updatedPreset
+    }
+    data.value = urlParam
+    url.value = urlParam
+    HasUrl.value = true
+    console.log(url.value)
+    
+    setTimeout(async()=>{
+      const qrCode = document.querySelector('#qr-code-container');
+      console.log(options.value)
+      console.log(styledBorderRadiusFormatted.value)
+      pngUrl.value = await getPngElement(
+        qrCode as HTMLElement,
+        options.value,
+        styledBorderRadiusFormatted.value
+      )
+    }, 500)
+   
+  }else{
+    loadQRConfigFromLocalStorage()
+  }
 })
 //#endregion
 
@@ -411,6 +446,17 @@ watch(exportMode, () => {
   resetData()
 })
 
+const getUrlParam = (param : string)=> {
+  let query = window.location.search.substring(1);
+  let vars = query.split('&');
+  for (let i = 0; i < vars.length; i++) {
+      var pair = vars[i].split('=');
+      if (pair[0] == param) {
+          return decodeURI(pair[1]);
+      }
+  }
+  return false;
+}
 const getFileFromInputEvent = (event: InputEvent) => {
   const inputElement = event.target as HTMLInputElement
   if (inputElement.files && inputElement.files.length > 0) {
@@ -547,225 +593,109 @@ async function generateBatchQRCodes(format: 'png' | 'svg') {
 <template>
   <main>
     <div class="relative grid place-items-center bg-white p-8 dark:bg-zinc-900 md:px-6">
-      <div
-        class="mb-8 flex w-full flex-row flex-wrap justify-between gap-4 md:mb-4 md:w-5/6 md:ps-4"
-      >
+      <div class="mb-8 flex w-full flex-row flex-wrap justify-between gap-4 md:mb-4 md:w-5/6 md:ps-4" v-show="!HasUrl">
         <div class="flex items-center gap-2">
           <h1 class="text-3xl text-gray-700 dark:text-gray-100">MiniQR</h1>
         </div>
         <div class="flex flex-row items-center justify-end gap-4">
           <div class="flex flex-row items-center gap-2">
-            <a
-              class="icon-button"
-              href="https://github.com/lyqht/styled-qr-code-generator"
-              target="_blank"
-              :aria-label="t('GitHub repository for this project')"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24">
-                <path
-                  fill="#abcbca"
-                  d="M12.001 2c-5.525 0-10 4.475-10 10a9.994 9.994 0 0 0 6.837 9.488c.5.087.688-.213.688-.476c0-.237-.013-1.024-.013-1.862c-2.512.463-3.162-.612-3.362-1.175c-.113-.288-.6-1.175-1.025-1.413c-.35-.187-.85-.65-.013-.662c.788-.013 1.35.725 1.538 1.025c.9 1.512 2.337 1.087 2.912.825c.088-.65.35-1.087.638-1.337c-2.225-.25-4.55-1.113-4.55-4.938c0-1.088.387-1.987 1.025-2.688c-.1-.25-.45-1.275.1-2.65c0 0 .837-.262 2.75 1.026a9.28 9.28 0 0 1 2.5-.338c.85 0 1.7.112 2.5.337c1.913-1.3 2.75-1.024 2.75-1.024c.55 1.375.2 2.4.1 2.65c.637.7 1.025 1.587 1.025 2.687c0 3.838-2.337 4.688-4.563 4.938c.363.312.676.912.676 1.85c0 1.337-.013 2.412-.013 2.75c0 .262.188.574.688.474A10.016 10.016 0 0 0 22 12c0-5.525-4.475-10-10-10Z"
-                />
-              </svg>
-            </a>
-            <div class="vertical-border"></div>
-            <button
-              class="icon-button"
-              @click="toggleDarkModePreference"
-              :aria-label="t('Toggle dark mode')"
-            >
+            <button class="icon-button" @click="toggleDarkModePreference" :aria-label="t('Toggle dark mode')">
               <span v-if="isDarkModePreferenceSetBySystem">
                 <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24">
                   <g fill="#abcabc">
                     <path d="M12 16a4 4 0 0 0 0-8z" />
-                    <path
-                      fill-rule="evenodd"
+                    <path fill-rule="evenodd"
                       d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10s10-4.477 10-10S17.523 2 12 2m0 2v4a4 4 0 1 0 0 8v4a8 8 0 1 0 0-16"
-                      clip-rule="evenodd"
-                    />
+                      clip-rule="evenodd" />
                   </g>
                 </svg>
               </span>
 
               <span v-else-if="isDarkMode">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="icon"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="#abcbca"
-                  stroke-width="2"
-                  width="36"
-                  height="36"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                  />
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" fill="none" viewBox="0 0 24 24" stroke="#abcbca"
+                  stroke-width="2" width="36" height="36">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </span>
               <span v-else>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="icon"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="2"
-                  width="36"
-                  height="36"
-                >
-                  <path
-                    fill="#abcbca"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                  />
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                  width="36" height="36">
+                  <path fill="#abcbca" stroke-linecap="round" stroke-linejoin="round"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
               </span>
             </button>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="icon"
-              width="36"
-              height="36"
-              viewBox="0 0 24 24"
-            >
-              <g
-                fill="none"
-                stroke="#abcbca"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-              >
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="36" height="36" viewBox="0 0 24 24">
+              <g fill="none" stroke="#abcbca" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
                 <path d="M4 5h7M7 4c0 4.846 0 7 .5 8" />
                 <path
-                  d="M10 8.5c0 2.286-2 4.5-3.5 4.5S4 11.865 4 11c0-2 1-3 3-3s5 .57 5 2.857c0 1.524-.667 2.571-2 3.143m2 6l4-9l4 9m-.9-2h-6.2"
-                />
+                  d="M10 8.5c0 2.286-2 4.5-3.5 4.5S4 11.865 4 11c0-2 1-3 3-3s5 .57 5 2.857c0 1.524-.667 2.571-2 3.143m2 6l4-9l4 9m-.9-2h-6.2" />
               </g>
             </svg>
-            <Combobox
-              :items="locales"
-              v-model:value="locale"
-              v-model:open="isLocaleSelectOpen"
-              :button-label="t('Select language')"
-            />
+            <Combobox :items="locales" v-model:value="locale" v-model:open="isLocaleSelectOpen"
+              :button-label="t('Select language')" />
           </div>
         </div>
       </div>
       <div class="w-full md:w-5/6">
         <div class="flex flex-col-reverse items-start justify-center gap-4 md:flex-row md:gap-12">
-          <div
-            id="main-content"
-            class="sticky top-0 flex w-full shrink-0 flex-col items-center justify-center p-4 md:w-fit"
-          >
-            <div id="qr-code-container">
-              <div
-                class="grid place-items-center overflow-hidden"
-                :style="[
-                  style,
-                  {
-                    width: '200px',
-                    height: '200px'
-                  }
-                ]"
-              >
-                <StyledQRCode
-                  v-if="data"
-                  v-bind="{ ...qrCodeProps, width: 200, height: 200 }"
-                  role="img"
-                  aria-label="QR code"
-                />
+          <div id="main-content"
+            class="sticky top-0 flex w-full shrink-0 flex-col items-center justify-center p-4 md:w-fit">
+            <div  :class="{absolute: pngUrl}" id="qr-code-container">
+              <div class="grid place-items-center overflow-hidden" :style="[
+                style,
+                {
+                  width: '200px',
+                  height: '200px'
+                }
+              ]">
+                <StyledQRCode v-if="data" v-bind="{ ...qrCodeProps, width: 200, height: 200 }" role="img"
+                  aria-label="QR code" />
                 <p v-else>{{ t('No data!') }}</p>
               </div>
             </div>
-            <div class="mt-4 flex flex-col items-center gap-2">
-              <div class="flex flex-col items-center justify-center gap-3">
-                <button
-                  v-if="IS_COPY_IMAGE_TO_CLIPBOARD_SUPPORTED"
-                  id="copy-qr-image-button"
-                  class="button flex w-fit max-w-[200px] flex-row items-center gap-1"
-                  @click="copyQRToClipboard"
-                  :disabled="exportMode === ExportMode.Batch"
-                  :title="
-                    t(
-                      'There are too many QR codes to be copied to the clipboard at once. Please download them as SVG or PNG instead.'
-                    )
-                  "
-                  :aria-label="t('Copy QR Code to clipboard')"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                  >
-                    <g
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                    >
-                      <path
-                        d="M8 10a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z"
-                      />
+            <div v-if="HasUrl" id="qr-code-png">
+              <img :src="pngUrl">
+            </div>
+            <div class="mt-4 flex flex-col items-center gap-2" v-show="!HasUrl">
+              <div class="flex flex-col items-center justify-center gap-3" >
+                <button v-if="IS_COPY_IMAGE_TO_CLIPBOARD_SUPPORTED" id="copy-qr-image-button"
+                  class="button flex w-fit max-w-[200px] flex-row items-center gap-1" @click="copyQRToClipboard"
+                  :disabled="exportMode === ExportMode.Batch" :title="t(
+                    'There are too many QR codes to be copied to the clipboard at once. Please download them as SVG or PNG instead.'
+                  )
+                    " :aria-label="t('Copy QR Code to clipboard')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                      stroke-width="2">
+                      <path d="M8 10a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z" />
                       <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
                     </g>
                   </svg>
                   <p>{{ t('Copy QR Code to clipboard') }}</p>
                 </button>
-                <button
-                  id="save-qr-code-config-button"
-                  class="button flex w-fit max-w-[200px] flex-row items-center gap-1"
-                  @click="downloadQRConfig"
-                  :aria-label="t('Save QR Code configuration')"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                  >
-                    <g
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                    >
+                <button id="save-qr-code-config-button"
+                  class="button flex w-fit max-w-[200px] flex-row items-center gap-1" @click="downloadQRConfig"
+                  :aria-label="t('Save QR Code configuration')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                      stroke-width="2">
                       <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-                      <path
-                        d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zm-5-4v-6"
-                      />
+                      <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zm-5-4v-6" />
                       <path d="M9.5 14.5L12 17l2.5-2.5" />
                     </g>
                   </svg>
                   <p>{{ t('Save QR Code configuration') }}</p>
                 </button>
-                <button
-                  id="load-qr-code-config-button"
-                  class="button flex w-fit max-w-[200px] flex-row items-center gap-1"
-                  @click="loadQrConfigFromFile"
-                  :aria-label="t('Load QR Code configuration')"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                  >
-                    <g
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                    >
+                <button id="load-qr-code-config-button"
+                  class="button flex w-fit max-w-[200px] flex-row items-center gap-1" @click="loadQrConfigFromFile"
+                  :aria-label="t('Load QR Code configuration')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                      stroke-width="2">
                       <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-                      <path
-                        d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zm-5-10v6"
-                      />
+                      <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zm-5-10v6" />
                       <path d="M9.5 13.5L12 11l2.5 2.5" />
                     </g>
                   </svg>
@@ -775,55 +705,25 @@ async function generateBatchQRCodes(format: 'png' | 'svg') {
               <div id="export-options" class="pt-4">
                 <p class="pb-2 text-zinc-900 dark:text-zinc-100">{{ t('Export as') }}</p>
                 <div class="flex flex-row items-center justify-center gap-2">
-                  <button
-                    id="download-qr-image-button-png"
-                    class="button"
-                    @click="downloadQRImageAsPng"
-                    :aria-label="t('Download QR Code as PNG')"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                    >
-                      <g
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                      >
+                  <button id="download-qr-image-button-png" class="button" @click="downloadQRImageAsPng"
+                    :aria-label="t('Download QR Code as PNG')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                        stroke-width="2">
                         <path d="M14 3v4a1 1 0 0 0 1 1h4" />
                         <path
-                          d="M5 12V5a2 2 0 0 1 2-2h7l5 5v4m1 3h-1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1v-3M5 18h1.5a1.5 1.5 0 0 0 0-3H5v6m6 0v-6l3 6v-6"
-                        />
+                          d="M5 12V5a2 2 0 0 1 2-2h7l5 5v4m1 3h-1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1v-3M5 18h1.5a1.5 1.5 0 0 0 0-3H5v6m6 0v-6l3 6v-6" />
                       </g>
                     </svg>
                   </button>
-                  <button
-                    id="download-qr-image-button-svg"
-                    class="button"
-                    @click="downloadQRImageAsSvg"
-                    :aria-label="t('Download QR Code as SVG')"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                    >
-                      <g
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                      >
+                  <button id="download-qr-image-button-svg" class="button" @click="downloadQRImageAsSvg"
+                    :aria-label="t('Download QR Code as SVG')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                        stroke-width="2">
                         <path d="M14 3v4a1 1 0 0 0 1 1h4" />
                         <path
-                          d="M5 12V5a2 2 0 0 1 2-2h7l5 5v4M4 20.25c0 .414.336.75.75.75H6a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h1.25a.75.75 0 0 1 .75.75m3-.75l2 6l2-6m6 0h-1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1v-3"
-                        />
+                          d="M5 12V5a2 2 0 0 1 2-2h7l5 5v4M4 20.25c0 .414.336.75.75.75H6a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H5a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h1.25a.75.75 0 0 1 .75.75m3-.75l2 6l2-6m6 0h-1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1v-3" />
                       </g>
                     </svg>
                   </button>
@@ -831,32 +731,16 @@ async function generateBatchQRCodes(format: 'png' | 'svg') {
               </div>
             </div>
           </div>
-          <div id="settings" class="flex w-full grow flex-col items-start gap-8 text-start">
+          <div v-show="!HasUrl" id="settings" class="flex w-full grow flex-col items-start gap-8 text-start">
             <div>
               <label>{{ t('Preset') }}</label>
               <div class="flex flex-row items-center justify-start gap-2">
-                <Combobox
-                  :items="allPresetOptions"
-                  v-model:value="selectedPresetKey"
-                  v-model:open="isPresetSelectOpen"
-                  :button-label="t('Select preset')"
-                  :insert-divider-at-indexes="[0, 2]"
-                />
-                <button
-                  class="icon-button"
-                  @click="randomizeStyleSettings"
-                  :aria-label="t('Randomize style')"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="40"
-                    height="32"
-                    viewBox="0 0 640 512"
-                  >
-                    <path
-                      fill="#888888"
-                      d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8l138.8 138.8c28.1 28.1 73.7 28.1 101.8 0l138.8-138.8c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0a24 24 0 1 1-48 0zM96 200a24 24 0 1 1 0 48a24 24 0 1 1 0-48zm128 176a24 24 0 1 1 0-48a24 24 0 1 1 0 48zm128-176a24 24 0 1 1 0 48a24 24 0 1 1 0-48zm-128-80a24 24 0 1 1 0-48a24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64h192c35.3 0 64-28.7 64-64V256c0-35.3-28.7-64-64-64H461.7c11.6 36 3.1 77-25.4 105.5L320 413.8V448zm160-120a24 24 0 1 1 0 48a24 24 0 1 1 0-48z"
-                    />
+                <Combobox :items="allPresetOptions" v-model:value="selectedPresetKey" v-model:open="isPresetSelectOpen"
+                  :button-label="t('Select preset')" :insert-divider-at-indexes="[0, 2]" />
+                <button class="icon-button" @click="randomizeStyleSettings" :aria-label="t('Randomize style')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="32" viewBox="0 0 640 512">
+                    <path fill="#888888"
+                      d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8l138.8 138.8c28.1 28.1 73.7 28.1 101.8 0l138.8-138.8c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0a24 24 0 1 1-48 0zM96 200a24 24 0 1 1 0 48a24 24 0 1 1 0-48zm128 176a24 24 0 1 1 0-48a24 24 0 1 1 0 48zm128-176a24 24 0 1 1 0 48a24 24 0 1 1 0-48zm-128-80a24 24 0 1 1 0-48a24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64h192c35.3 0 64-28.7 64-64V256c0-35.3-28.7-64-64-64H461.7c11.6 36 3.1 77-25.4 105.5L320 413.8V448zm160-120a24 24 0 1 1 0 48a24 24 0 1 1 0-48z" />
                   </svg>
                 </button>
               </div>
@@ -867,71 +751,39 @@ async function generateBatchQRCodes(format: 'png' | 'svg') {
                   {{ t('Data to encode') }}
                 </label>
                 <div class="flex grow items-center gap-2">
-                  <button
-                    :class="[
-                      'secondary-button',
-                      { 'opacity-50': exportMode !== ExportMode.Single }
-                    ]"
-                    @click="exportMode = ExportMode.Single"
-                  >
+                  <button :class="[
+                    'secondary-button',
+                    { 'opacity-50': exportMode !== ExportMode.Single }
+                  ]" @click="exportMode = ExportMode.Single">
                     {{ $t('Single export') }}
                   </button>
-                  <button
-                    :class="['secondary-button', { 'opacity-50': exportMode !== ExportMode.Batch }]"
-                    @click="exportMode = ExportMode.Batch"
-                  >
+                  <button :class="['secondary-button', { 'opacity-50': exportMode !== ExportMode.Batch }]"
+                    @click="exportMode = ExportMode.Batch">
                     {{ $t('Batch export') }}
                   </button>
-                  <div
-                    v-if="exportMode === ExportMode.Batch"
-                    :class="[
-                      'flex grow items-center justify-end',
-                      dataStringsFromCsv.length > 0 && 'opacity-80'
-                    ]"
-                  >
-                    <input
-                      id="ignore-header"
-                      type="checkbox"
-                      class="checkbox mr-2"
-                      v-model="ignoreHeaderRow"
-                      @change="onCsvFileUpload($event)"
-                    />
+                  <div v-if="exportMode === ExportMode.Batch" :class="[
+                    'flex grow items-center justify-end',
+                    dataStringsFromCsv.length > 0 && 'opacity-80'
+                  ]">
+                    <input id="ignore-header" type="checkbox" class="checkbox mr-2" v-model="ignoreHeaderRow"
+                      @change="onCsvFileUpload($event)" />
                     <label for="ignore-header" class="!text-sm !font-normal">
                       {{ $t('Ignore header row') }}
                     </label>
                   </div>
                 </div>
               </div>
-              <textarea
-                v-if="exportMode === ExportMode.Single"
-                name="data"
-                class="text-input"
-                id="data"
-                rows="2"
-                :placeholder="t('data to encode e.g. a URL or a string')"
-                v-model="data"
-              />
+              <textarea v-if="exportMode === ExportMode.Single" name="data" class="text-input" id="data" rows="2"
+                :placeholder="t('data to encode e.g. a URL or a string')" v-model="data" />
               <template v-else>
-                <button
-                  v-if="!csvFile"
-                  class="w-full rounded-lg border-2 border-dashed border-gray-300 p-8 text-center"
-                  :aria-label="t('Click to select and upload a CSV file')"
-                  @click="fileInput.click()"
-                  @keyup.enter="fileInput.click()"
-                  @keyup.space="fileInput.click()"
-                  @dragover.prevent
-                  @drop.prevent="onCsvFileUpload"
-                >
+                <button v-if="!csvFile" class="w-full rounded-lg border-2 border-dashed border-gray-300 p-8 text-center"
+                  :aria-label="t('Click to select and upload a CSV file')" @click="fileInput.click()"
+                  @keyup.enter="fileInput.click()" @keyup.space="fileInput.click()" @dragover.prevent
+                  @drop.prevent="onCsvFileUpload">
                   <p aria-hidden="true">
                     {{ $t('Drag and drop a CSV file here or click to select') }}
                   </p>
-                  <input
-                    ref="fileInput"
-                    type="file"
-                    accept=".csv"
-                    class="hidden"
-                    @change="onCsvFileUpload"
-                  />
+                  <input ref="fileInput" type="file" accept=".csv" class="hidden" @change="onCsvFileUpload" />
                 </button>
                 <div v-else-if="isValidCsv" class="p-4 text-center">
                   <div v-if="isBatchExportSuccess">
@@ -967,45 +819,25 @@ async function generateBatchQRCodes(format: 'png' | 'svg') {
             <fieldset class="flex-1" role="radiogroup" tabindex="0">
               <div class="flex flex-row items-center gap-2">
                 <legend>{{ t('Error correction level') }}</legend>
-                <a
-                  href="https://docs.uniqode.com/en/articles/7219782-what-is-the-recommended-error-correction-level-for-printing-a-qr-code"
-                  target="_blank"
-                  class="icon-button flex flex-row items-center"
-                  :aria-label="t('What is error correction level?')"
-                >
-                  <svg
-                    class="me-1"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      fill="#888888"
-                      d="M11.95 18q.525 0 .888-.363t.362-.887t-.362-.888t-.888-.362t-.887.363t-.363.887t.363.888t.887.362m.05 4q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m0-2q3.35 0 5.675-2.325T20 12t-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20m.1-12.3q.625 0 1.088.4t.462 1q0 .55-.337.975t-.763.8q-.575.5-1.012 1.1t-.438 1.35q0 .35.263.588t.612.237q.375 0 .638-.25t.337-.625q.1-.525.45-.937t.75-.788q.575-.55.988-1.2t.412-1.45q0-1.275-1.037-2.087T12.1 6q-.95 0-1.812.4T8.975 7.625q-.175.3-.112.638t.337.512q.35.2.725.125t.625-.425q.275-.375.688-.575t.862-.2"
-                    />
+                <a href="https://docs.uniqode.com/en/articles/7219782-what-is-the-recommended-error-correction-level-for-printing-a-qr-code"
+                  target="_blank" class="icon-button flex flex-row items-center"
+                  :aria-label="t('What is error correction level?')">
+                  <svg class="me-1" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+                    <path fill="#888888"
+                      d="M11.95 18q.525 0 .888-.363t.362-.887t-.362-.888t-.888-.362t-.887.363t-.363.887t.363.888t.887.362m.05 4q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m0-2q3.35 0 5.675-2.325T20 12t-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20m.1-12.3q.625 0 1.088.4t.462 1q0 .55-.337.975t-.763.8q-.575.5-1.012 1.1t-.438 1.35q0 .35.263.588t.612.237q.375 0 .638-.25t.337-.625q.1-.525.45-.937t.75-.788q.575-.55.988-1.2t.412-1.45q0-1.275-1.037-2.087T12.1 6q-.95 0-1.812.4T8.975 7.625q-.175.3-.112.638t.337.512q.35.2.725.125t.625-.425q.275-.375.688-.575t.862-.2" />
                   </svg>
                   <span class="text-sm text-gray-500">{{ t('What is this?') }}</span>
                 </a>
               </div>
               <div v-for="level in errorCorrectionLevels" class="radiogroup" :key="level">
-                <input
-                  :id="'errorCorrectionLevel-' + level"
-                  type="radio"
-                  v-model="errorCorrectionLevel"
-                  :value="level"
-                  :aria-describedby="
-                    level === recommendedErrorCorrectionLevel ? 'recommended-text' : undefined
-                  "
-                />
+                <input :id="'errorCorrectionLevel-' + level" type="radio" v-model="errorCorrectionLevel" :value="level"
+                  :aria-describedby="level === recommendedErrorCorrectionLevel ? 'recommended-text' : undefined
+                    " />
                 <div class="flex items-center gap-2">
                   <label :for="'errorCorrectionLevel-' + level">{{
                     t(ERROR_CORRECTION_LEVEL_LABELS[level])
-                  }}</label>
-                  <span
-                    v-if="level === recommendedErrorCorrectionLevel"
-                    class="text-sm text-gray-500"
-                  >
+                    }}</label>
+                  <span v-if="level === recommendedErrorCorrectionLevel" class="text-sm text-gray-500">
                     <span :aria-hidden="true" class="me-1">✓</span>
                     <span id="recommended-text">
                       {{ t('Recommended') }}
@@ -1020,202 +852,103 @@ async function generateBatchQRCodes(format: 'png' | 'svg') {
                   {{ t('Logo image URL') }}
                 </label>
                 <button class="icon-button flex flex-row items-center" @click="uploadImage">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                  >
-                    <g
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                    >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                      stroke-width="2">
                       <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-                      <path
-                        d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zm-5-10v6"
-                      />
+                      <path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2zm-5-10v6" />
                       <path d="M9.5 13.5L12 11l2.5 2.5" />
                     </g>
                   </svg>
                   <span>{{ t('Upload image') }}</span>
                 </button>
               </div>
-              <textarea
-                name="image-url"
-                class="text-input"
-                id="image-url"
-                rows="1"
-                :placeholder="t('Logo image URL')"
-                v-model="image"
-              />
+              <textarea name="image-url" class="text-input" id="image-url" rows="1" :placeholder="t('Logo image URL')"
+                v-model="image" />
             </div>
             <div class="flex flex-row items-center gap-2">
               <label for="with-background">
                 {{ t('With background') }}
               </label>
-              <input
-                id="with-background"
-                type="checkbox"
-                class="checkbox"
-                v-model="includeBackground"
-              />
+              <input id="with-background" type="checkbox" class="checkbox" v-model="includeBackground" />
             </div>
             <div id="color-settings" :class="'flex w-full flex-row flex-wrap gap-4'">
-              <div
-                :inert="!includeBackground"
-                :class="[!includeBackground && 'opacity-30', 'flex flex-row items-center gap-2']"
-              >
+              <div :inert="!includeBackground"
+                :class="[!includeBackground && 'opacity-30', 'flex flex-row items-center gap-2']">
                 <label for="background-color">{{ t('Background color') }}</label>
-                <input
-                  id="background-color"
-                  type="color"
-                  class="color-input"
-                  v-model="styleBackground"
-                />
+                <input id="background-color" type="color" class="color-input" v-model="styleBackground" />
               </div>
               <div class="flex flex-row items-center gap-2">
                 <label for="dots-color">{{ t('Dots color') }}</label>
-                <input
-                  id="dots-color"
-                  type="color"
-                  class="color-input"
-                  v-model="dotsOptionsColor"
-                />
+                <input id="dots-color" type="color" class="color-input" v-model="dotsOptionsColor" />
               </div>
               <div class="flex flex-row items-center gap-2">
                 <label for="corners-square-color">{{ t('Corners Square color') }}</label>
-                <input
-                  id="corners-square-color"
-                  type="color"
-                  class="color-input"
-                  v-model="cornersSquareOptionsColor"
-                />
+                <input id="corners-square-color" type="color" class="color-input" v-model="cornersSquareOptionsColor" />
               </div>
               <div class="flex flex-row items-center gap-2">
                 <label for="corners-dot-color">{{ t('Corners Dot color') }}</label>
-                <input
-                  id="corners-dot-color"
-                  type="color"
-                  class="color-input"
-                  v-model="cornersDotOptionsColor"
-                />
+                <input id="corners-dot-color" type="color" class="color-input" v-model="cornersDotOptionsColor" />
               </div>
             </div>
             <div class="w-full">
               <label for="width">
                 {{ t('Width (px)') }}
               </label>
-              <input
-                class="text-input"
-                id="width"
-                type="number"
-                placeholder="width in pixels"
-                v-model="width"
-              />
+              <input class="text-input" id="width" type="number" placeholder="width in pixels" v-model="width" />
             </div>
             <div class="w-full">
               <label for="height">
                 {{ t('Height (px)') }}
               </label>
-              <input
-                class="text-input"
-                id="height"
-                type="number"
-                placeholder="height in pixels"
-                v-model="height"
-              />
+              <input class="text-input" id="height" type="number" placeholder="height in pixels" v-model="height" />
             </div>
             <div class="w-full">
               <label for="margin">
                 {{ t('Margin (px)') }}
               </label>
-              <input
-                class="text-input"
-                id="margin"
-                type="number"
-                placeholder="0"
-                v-model="margin"
-              />
+              <input class="text-input" id="margin" type="number" placeholder="0" v-model="margin" />
             </div>
             <div class="w-full">
               <label for="image-margin">
                 {{ t('Image margin (px)') }}
               </label>
-              <input
-                class="text-input"
-                id="image-margin"
-                type="number"
-                placeholder="0"
-                v-model="imageMargin"
-              />
+              <input class="text-input" id="image-margin" type="number" placeholder="0" v-model="imageMargin" />
             </div>
             <div class="w-full">
               <label for="border-radius">
                 {{ t('Border radius (px)') }}
               </label>
-              <input
-                class="text-input"
-                id="border-radius"
-                type="number"
-                placeholder="24"
-                v-model="styleBorderRadius"
-              />
+              <input class="text-input" id="border-radius" type="number" placeholder="24" v-model="styleBorderRadius" />
             </div>
-            <div
-              id="dots-squares-settings"
-              class="mb-4 flex w-full flex-col flex-wrap gap-6 md:flex-row"
-            >
+            <div id="dots-squares-settings" class="mb-4 flex w-full flex-col flex-wrap gap-6 md:flex-row">
               <fieldset class="flex-1" role="radiogroup" tabindex="0">
                 <legend>{{ t('Dots type') }}</legend>
-                <div
-                  class="radiogroup"
-                  v-for="type in [
-                    'dots',
-                    'rounded',
-                    'classy',
-                    'classy-rounded',
-                    'square',
-                    'extra-rounded'
-                  ]"
-                  :key="type"
-                >
-                  <input
-                    :id="'dotsOptionsType-' + type"
-                    type="radio"
-                    v-model="dotsOptionsType"
-                    :value="type"
-                  />
+                <div class="radiogroup" v-for="type in [
+                  'dots',
+                  'rounded',
+                  'classy',
+                  'classy-rounded',
+                  'square',
+                  'extra-rounded'
+                ]" :key="type">
+                  <input :id="'dotsOptionsType-' + type" type="radio" v-model="dotsOptionsType" :value="type" />
                   <label :for="'dotsOptionsType-' + type">{{ t(type) }}</label>
                 </div>
               </fieldset>
               <fieldset class="flex-1" role="radiogroup" tabindex="0">
                 <legend>{{ t('Corners Square type') }}</legend>
-                <div
-                  class="radiogroup"
-                  v-for="type in ['dot', 'square', 'extra-rounded']"
-                  :key="type"
-                >
-                  <input
-                    :id="'cornersSquareOptionsType-' + type"
-                    type="radio"
-                    v-model="cornersSquareOptionsType"
-                    :value="type"
-                  />
+                <div class="radiogroup" v-for="type in ['dot', 'square', 'extra-rounded']" :key="type">
+                  <input :id="'cornersSquareOptionsType-' + type" type="radio" v-model="cornersSquareOptionsType"
+                    :value="type" />
                   <label :for="'cornersSquareOptionsType-' + type">{{ t(type) }}</label>
                 </div>
               </fieldset>
               <fieldset class="flex-1" role="radiogroup" tabindex="0">
                 <legend>{{ t('Corners Dot type') }}</legend>
                 <div class="radiogroup" v-for="type in ['dot', 'square']" :key="type">
-                  <input
-                    :id="'cornersDotOptionsType-' + type"
-                    type="radio"
-                    v-model="cornersDotOptionsType"
-                    :value="type"
-                  />
+                  <input :id="'cornersDotOptionsType-' + type" type="radio" v-model="cornersDotOptionsType"
+                    :value="type" />
                   <label :for="'cornersDotOptionsType-' + type">{{ t(type) }}</label>
                 </div>
               </fieldset>
@@ -1282,8 +1015,13 @@ input[type='radio'] {
   @apply flex flex-row items-center gap-1;
 }
 
-.radiogroup > * > label,
-.radiogroup > label {
+.radiogroup>*>label,
+.radiogroup>label {
   @apply font-normal;
+}
+
+.absolute {
+position:absolute;
+z-index: -100;
 }
 </style>

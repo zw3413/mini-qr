@@ -81,6 +81,32 @@ export const vercelDarkPreset: Preset = {
   }
 }
 
+export const bakerstopBluePreset: Preset = {
+  ...defaultPresetOptions,
+  name: 'Bakers.top',
+  data: 'https://bakers.top',
+  image: '/bakerstopgreen.png',
+  dotsOptions: {
+    color: '#1D6E47',
+    type: 'classy-rounded'
+  },
+  cornersSquareOptions: {
+    color: '#1D6E47',
+    type: 'square'
+  },
+  cornersDotOptions: {
+    color: '041B11',
+    type: 'square'
+  },
+  imageOptions: {
+    margin: 8
+  },
+  style: {
+    borderRadius: '12px',
+    background: '#DCEEDE'
+  }
+}
+
 export const supabaseGreenPreset: Preset = {
   ...defaultPresetOptions,
   name: 'Supabase Green',
@@ -312,6 +338,7 @@ export const allPresets: Preset[] = [
   defaultPreset,
   plainPreset,
   ...[
+    bakerstopBluePreset,
     padletPreset,
     uiliciousPreset,
     supabaseGreenPreset,

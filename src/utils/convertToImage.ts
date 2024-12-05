@@ -69,11 +69,13 @@ export function downloadPngElement(
   options: Options,
   borderRadius?: string
 ) {
+  console.log(options)
   getPngElement(element, options, borderRadius)
     .then((dataUrl: string) => {
       const link = document.createElement('a')
       link.href = dataUrl
       link.download = filename
+      console.log(dataUrl)
       link.click()
     })
     .catch((error: Error) => {
